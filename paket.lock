@@ -1,19 +1,25 @@
 NUGET
   remote: https://nuget.org/api/v2
   specs:
+    Deedle (1.2.4)
     FAKE (4.9.3)
-    FSharp.Compiler.Service (1.4.0.6)
-    FSharp.Formatting (2.12.0)
-      FSharp.Compiler.Service (1.4.0.6)
-      FSharpVSPowerTools.Core (2.1.0)
-    FSharpVSPowerTools.Core (2.1.0)
-      FSharp.Compiler.Service (>= 1.4.0.6)
+    FSharp.Charting (0.90.13)
+    FSharp.Compiler.Service (1.4.2.1)
+    FSharp.Core (4.0.0.1)
+    FSharp.Data (2.2.5)
+      Zlib.Portable (>= 1.10.0) - framework: portable-net40+sl50+wp80+win80
+    FSharp.Formatting (2.10.0)
+      FSharp.Compiler.Service (>= 0.0.87)
+      FSharpVSPowerTools.Core (1.8.0)
+    FSharpVSPowerTools.Core (1.8.0)
+      FSharp.Compiler.Service (>= 0.0.87)
     Microsoft.Bcl (1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
     Microsoft.Bcl.Build (1.0.21) - import_targets: false
     Microsoft.Net.Http (2.2.29)
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
+    Newtonsoft.Json (7.0.1)
     NuGet.CommandLine (2.8.6)
     NUnit (3.0.0)
     NUnit.Console (3.0.0)
@@ -22,6 +28,9 @@ NUGET
     Octokit (0.16.0)
       Microsoft.Net.Http
     SourceLink.Fake (1.1.0)
+    Suave (0.33.0)
+      FSharp.Core (>= 3.1.2.5)
+    Zlib.Portable (1.11.0) - framework: portable-net40+sl50+wp80+win80
 GITHUB
   remote: fsharp/FAKE
   specs:

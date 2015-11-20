@@ -1,10 +1,17 @@
 source https://nuget.org/api/v2
 
+nuget Deedle
+nuget FSharp.Charting
+nuget FSharp.Compiler.Service
+nuget FSharp.Core
+nuget FSharp.Data
 nuget FSharp.Formatting
+nuget Newtonsoft.Json
 nuget NUnit 
 nuget NUnit.Runners
 nuget Nuget.CommandLine
 nuget FAKE
 nuget SourceLink.Fake
+nuget Suave
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
