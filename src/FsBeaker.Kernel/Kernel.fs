@@ -115,8 +115,10 @@ type ConsoleKernel() =
 
     /// Evaluates the specified code
     let eval (code: string) =
-
+        let consoleOut = System.Console.Out
+        Console.SetOut outStream //capture output written to console during FSI eval
         fsiEval.EvalInteraction(code)
+        Console.SetOut consoleOut
 
         let error = sbErr.ToString()
         if String.IsNullOrWhiteSpace(error) then 
