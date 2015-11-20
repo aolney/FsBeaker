@@ -117,35 +117,40 @@ type ConsoleKernel() =
     let eval (code: string) =
         let consoleOut = System.Console.Out
         Console.SetOut outStream //capture output written to console during FSI eval
-        fsiEval.EvalInteraction(code)
-        Console.SetOut consoleOut
+        try
+            fsiEval.EvalInteraction(code)
+            Console.SetOut consoleOut
+            let error = sbErr.ToString()
+            if String.IsNullOrWhiteSpace(error) then 
 
-        let error = sbErr.ToString()
-        if String.IsNullOrWhiteSpace(error) then 
+                // return results (not yet)
+                let result = 
+                    match GetLastExpression() with
+                    | Some(it) -> 
+                            
+                        let secondaryType = 
+                            match it.ReflectionValue with
+                            | null -> typeof<obj>
+                            | _ -> it.ReflectionValue.GetType()
 
-            // return results (not yet)
-            let result = 
-                match GetLastExpression() with
-                | Some(it) -> 
-                        
-                    let secondaryType = 
-                        match it.ReflectionValue with
-                        | null -> typeof<obj>
-                        | _ -> it.ReflectionValue.GetType()
+                        let printer = Printers.findDisplayPrinter(it.ReflectionType, secondaryType)
+                        let (_, callback) = printer
+                        callback(it.ReflectionValue)
 
-                    let printer = Printers.findDisplayPrinter(it.ReflectionType, secondaryType)
-                    let (_, callback) = printer
-                    callback(it.ReflectionValue)
+                    | None -> 
+                            
+                        { ContentType = "text/plain"; Data = "" }
 
-                | None -> 
-                        
-                    { ContentType = "text/plain"; Data = "" }
+                { Result = result; Status = ExecuteReponseStatus.OK }
+            
+            else
 
-            { Result = result; Status = ExecuteReponseStatus.OK }
-        
-        else
-
-            { Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+                { Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+        with
+        | e ->
+            Console.SetOut consoleOut
+            { Result = { ContentType = "text/plain"; Data = e.Message + "\r\n" + sbErr.ToString()}; Status = ExecuteReponseStatus.Error }
+            
 
     /// Processes a request to execute some code
     let processExecute(req: ExecuteRequest) =

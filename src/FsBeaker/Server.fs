@@ -65,8 +65,8 @@ module Server =
     
         /// The configuration is the default listening to localhost:port (127.0.0.1).
         let config = {
-            default_config with
-                bindings = [ { scheme = HTTP; ip = IPAddress.Parse("127.0.0.1"); port = port } ]
+            defaultConfig with
+                bindings = [ HttpBinding.mk HTTP (IPAddress.Parse("127.0.0.1")) port ]
             }
 
         /// Scrubs the code of tabs and replaces them with four spaces
@@ -75,11 +75,10 @@ module Server =
         /// Requires that a parameter be present by name in the request. If the parameter
         /// is not in the request, then BAD_REQUEST is returned, otherwise the function is called
         /// with the parsed out parameter.
-        let required request parameterName f =
-            let q = form request
-            match q ^^ parameterName with
-            | None -> BAD_REQUEST("Parameter not supplied " + parameterName)
-            | Some(v) -> f(v)
+        let required (request : HttpRequest) parameterName f =
+            match request.formData parameterName with
+            | Choice2Of2 msg -> BAD_REQUEST("Parameter not supplied " + parameterName)
+            | Choice1Of2 (v) -> f(v)
 
         /// Requires that a parameter be present by name in the request and be an integer. If the parameter
         /// is not in the request, then BAD_REQUEST is returned. If the parameter is not an integer, then 
@@ -140,17 +139,17 @@ module Server =
         let app = 
             choose [
                 POST >>= choose [
-                    url "/fsharp/getShell"          >>= set_header "Content-Type" "text/plain"       >>= request getShell
-                    url "/fsharp/evaluate"          >>= set_header "Content-Type" "application/json" >>= context evaluate
-                    url "/fsharp/intellisense"      >>= set_header "Content-Type" "application/json" >>= request intellisense
-                    url "/fsharp/exit"              >>= OK "Not yet implemented"
-                    url "/fsharp/cancelExecution"   >>= OK "Not yet implemented"
-                    url "/fsharp/killAllThreads"    >>= OK "Not yet implemented"
-                    url "/fsharp/resetEnvironment"  >>= OK "Not yet implemented"
-                    url "/fsharp/setShellOptions"   >>= OK "Not yet implemented"
+                    path "/fsharp/getShell"          >>= setHeader "Content-Type" "text/plain"       >>= request getShell
+                    path "/fsharp/evaluate"          >>= setHeader "Content-Type" "application/json" >>= context evaluate
+                    path "/fsharp/intellisense"      >>= setHeader "Content-Type" "application/json" >>= request intellisense
+                    path "/fsharp/exit"              >>= OK "Not yet implemented"
+                    path "/fsharp/cancelExecution"   >>= OK "Not yet implemented"
+                    path "/fsharp/killAllThreads"    >>= OK "Not yet implemented"
+                    path "/fsharp/resetEnvironment"  >>= OK "Not yet implemented"
+                    path "/fsharp/setShellOptions"   >>= OK "Not yet implemented"
                 ]
                 NOT_FOUND "404"
             ]
 
         stdout.WriteLine("Successfully started server")
-        web_server config app
+        startWebServer config app
