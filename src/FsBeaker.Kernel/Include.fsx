@@ -1,7 +1,4 @@
-﻿// include directory, this will be replaced by the kernel
-#I "{0}"
-
-// load base dlls
+﻿// load base dlls
 #r "FSharp.Charting.dll"
 #r "FSharp.Data.TypeProviders.dll"
 #r "System.Data.dll"

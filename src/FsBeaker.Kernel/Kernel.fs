@@ -98,8 +98,7 @@ type ConsoleKernel() =
         let file = FileInfo(Assembly.GetEntryAssembly().Location)
         let dir = file.Directory.FullName
         let includeFile = Path.Combine(dir, "Include.fsx")
-        let code = File.ReadAllText(includeFile)
-        String.Format(code, dir.Replace("\\", "\\\\"))
+        File.ReadAllText(includeFile)
 
     /// Sends a line
     let sendLine(str:string) = 

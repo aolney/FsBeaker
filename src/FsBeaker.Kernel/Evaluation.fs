@@ -14,7 +14,18 @@ module Evaluation =
     let internal outStream = new StringWriter(sbOut)
     let internal errStream = new StringWriter(sbErr)
     let internal fsiConfig = FsiEvaluationSession.GetDefaultConfiguration()
-    let internal fsiEval = FsiEvaluationSession.Create(fsiConfig, [|"--noninteractive"|], inStream, outStream, errStream)
+    let internal fsiEval =
+        let appHome =
+            let appHome = Environment.GetEnvironmentVariable("APP_HOME")
+            if appHome <> null && Directory.Exists appHome then
+                Path.Combine(appHome,"lib")
+            else
+                ""
+        let options = 
+            [| yield "--noninteractive"
+               if appHome <> "" then yield "--lib:\"" + appHome + "\""
+            |]
+        FsiEvaluationSession.Create(fsiConfig, options, inStream, outStream, errStream)
 
     /// Converts a character offset inside a string into a lineIndex and charIndex
     let PreprocessSource (source:string, character) =
