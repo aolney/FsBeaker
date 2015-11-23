@@ -88,6 +88,11 @@ module Printers =
         addDisplayPrinter(fun (x:Plot) ->
             { ContentType = "chart"; Data = x }
         )
+        
+        // add TimePlot printer
+        addDisplayPrinter(fun (x:TimePlot) ->
+            { ContentType = "chart"; Data = x }
+        )
 
         // add CombinedPlot printer
         addDisplayPrinter(fun (x:FsBeaker.Charts.CombinedPlot) ->
