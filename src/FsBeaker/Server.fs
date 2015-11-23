@@ -148,6 +148,9 @@ module Server =
                     path "/fsharp/resetEnvironment"  >>= OK "Not yet implemented"
                     path "/fsharp/setShellOptions"   >>= OK "Not yet implemented"
                 ]
+                GET >>= choose [
+                    path "/fsharp/ready"             >>= OK "ok"
+                ]
                 NOT_FOUND "404"
             ]
 

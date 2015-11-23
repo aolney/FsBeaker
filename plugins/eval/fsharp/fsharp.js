@@ -157,8 +157,22 @@ define(function (require, exports, bkSessionManager)
             }).success(cb);
         },
 
+        resetEnvironment: function (cb) {
+            var self = this;
+            $.ajax({
+                type: "POST",
+                datatype: "json",
+                url: bkHelper.serverUrl(serviceBase + "/fsharp/resetEnvironment"),
+                data: { shellId: self.settings.shellID }
+            }).done(cb);
+        },
+
         spec: {
-            useIntellisense: { type: "settableBoolean", action: "updateShell", name: "Use Intellisense" }
+            resetEnv: { type: "action", action: "resetEnvironment", name: "Reset Environment" },
+            interrupt: { type: "action", action: "interrupt", name: "Interrupt" },
+            setup: { type: "settableString", action: "updateShell", name: "Setup Code" },
+            fsiArgs: { type: "settableString", action: "updateShell", name: "Additional FSI Arguments" },
+            useIntellisense: { type: "settableString", action: "updateShell", name: "Use Intellisense" }
         }
     };
 
@@ -175,126 +189,110 @@ define(function (require, exports, bkSessionManager)
             }).success(function (ret)
             {
                 serviceBase = ret;
-
-                var FSharpShell = function (settings, doneCB)
-                {
-                    var self = this;
-                    var setShellIdCB = function (id)
-                    {
-                        settings.shellID = id;
-                        self.settings = settings;
-                        function cb()
-                        {
-                            if (bkHelper.hasSessionId())
-                            {
-                                var initCode = "let beaker = new NamespaceClient(\"" + bkHelper.getSessionId() + "\")";
-                                self.evaluate(initCode, {}).then(function ()
-                                {
-                                    if (doneCB)
-                                    {
-                                        doneCB(self);
-                                    }
-                                });
+                bkHelper.spinUntilReady(bkHelper.serverUrl(serviceBase + "/fsharp/ready")).then(function () {
+                    var FSharpShell = function (settings, doneCB) {
+                        var self = this;
+                        var setShellIdCB = function (id) {
+                            settings.shellID = id;
+                            if (!("useIntellisense" in settings)) {
+                                settings.useIntellisense = "true";
                             }
-                            else
-                            {
-                                if (doneCB)
-                                {
-                                    doneCB(self);
-                                }
-                            }
-                        }
-                        self.updateShell(cb);
-                    };
-
-                    if (!settings.shellID)
-                    {
-                        settings.shellID = "";
-                    }
-                    this.newShell(settings.shellID, setShellIdCB);
-                    this.perform = function (what)
-                    {
-                        var action = this.spec[what].action;
-                        this[action]();
-                    };
-
-                    function applyIntellisense()
-                    {
-                        $('.CodeMirror').each(function (idx, div)
-                        {
-                            var editor = div.CodeMirror;
-                            if (editor.options.mode === 'text/x-fsharp' && !editor.intellisense)
-                            {
-                                var intellisense = new CodeMirrorIntellisense(editor);
-                                editor.intellisense = intellisense;
-                                intellisense.addDeclarationTrigger({ keyCode: 190, type: 'up' }); // `.`
-                                intellisense.addDeclarationTrigger({ keyCode: 32, ctrlKey: true, preventDefault: true, type: 'down' }); // `ctrl+space`
-                                intellisense.addDeclarationTrigger({ keyCode: 191 }); // `/`
-                                intellisense.addDeclarationTrigger({ keyCode: 220 }); // `\`
-                                intellisense.addDeclarationTrigger({ keyCode: 222 }); // `"`
-                                intellisense.addDeclarationTrigger({ keyCode: 222, shiftKey: true }); // `"`
-                                intellisense.addMethodsTrigger({ keyCode: 57, shiftKey: true }); // `(`
-                                intellisense.addMethodsTrigger({ keyCode: 48, shiftKey: true });// `)`
-                                intellisense.onMethod(function (item, position)
-                                {
-
-                                });
-                                intellisense.onDeclaration(function (item, position)
-                                {
-                                    var cursor = editor.doc.getCursor();
-                                    var line = editor.getLine(cursor.line);
-                                    var isSlash = item.keyCode === 191 || item.keyCode === 220;
-                                    var isQuote = item.keyCode === 222;
-
-                                    var isLoadOrRef = line.indexOf('#load') === 0
-                                        || line.indexOf('#r') === 0;
-
-                                    var isStartLoadOrRef = line === '#load "'
-                                        || line === '#r "'
-                                        || line === '#load @"'
-                                        || line === '#r @"';
-
-                                    if (isSlash && !isLoadOrRef)
-                                    {
-                                        return;
-                                    }
-                                    if (isQuote && !isStartLoadOrRef)
-                                    {
-                                        return;
-                                    }
-
-                                    var self = this;
-                                    $.ajax({
-                                        type: "POST",
-                                        datatype: "json",
-                                        url: bkHelper.serverUrl(serviceBase + "/fsharp/intellisense"),
-                                        data: { shellId: settings.shellID, code: editor.getValue(), lineIndex: cursor.line, charIndex: cursor.ch }
-                                    }).done(function (x)
-                                    {
-                                        if (x.declarations.length > 1)
-                                        {
-                                            var decls = intellisense.getDecls();
-                                            intellisense.setDeclarations(x.declarations);
-                                            intellisense.setStartColumnIndex(x.startIndex);
-
-                                            // if there is only one item after choosing it, just insert it
-                                            if (decls.getFilteredDeclarations().length === 1)
-                                            {
-                                                decls.setSelectedIndex(0);
-                                                decls.triggerItemChosen(decls.getSelectedItem());
-                                            }
+                            self.settings = settings;
+                            function cb() {
+                                if (bkHelper.hasSessionId()) {
+                                    var initCode = "let beaker = new NamespaceClient(\"" + bkHelper.getSessionId() + "\")";
+                                    self.evaluate(initCode, {}).then(function () {
+                                        if (doneCB) {
+                                            doneCB(self);
                                         }
                                     });
-                                });
-                                console.log('Intellisense applied to cell');
+                                }
+                                else {
+                                    if (doneCB) {
+                                        doneCB(self);
+                                    }
+                                }
                             }
-                        });
+                            self.updateShell(cb);
+                        };
+
+                        if (!settings.shellID) {
+                            settings.shellID = "";
+                        }
+                        this.newShell(settings.shellID, setShellIdCB);
+                        this.perform = function (what) {
+                            var action = this.spec[what].action;
+                            this[action]();
+                        };
+
+                        function applyIntellisense() {
+                            $('.CodeMirror').each(function (idx, div) {
+                                var editor = div.CodeMirror;
+                                if (editor.options.mode === 'text/x-fsharp' && !editor.intellisense) {
+                                    var intellisense = new CodeMirrorIntellisense(editor);
+                                    editor.intellisense = intellisense;
+                                    intellisense.addDeclarationTrigger({ keyCode: 190, type: 'up' }); // `.`
+                                    intellisense.addDeclarationTrigger({ keyCode: 32, ctrlKey: true, preventDefault: true, type: 'down' }); // `ctrl+space`
+                                    intellisense.addDeclarationTrigger({ keyCode: 191 }); // `/`
+                                    intellisense.addDeclarationTrigger({ keyCode: 220 }); // `\`
+                                    intellisense.addDeclarationTrigger({ keyCode: 222 }); // `"`
+                                    intellisense.addDeclarationTrigger({ keyCode: 222, shiftKey: true }); // `"`
+                                    intellisense.addMethodsTrigger({ keyCode: 57, shiftKey: true }); // `(`
+                                    intellisense.addMethodsTrigger({ keyCode: 48, shiftKey: true });// `)`
+                                    intellisense.onMethod(function (item, position) {
+
+                                    });
+                                    intellisense.onDeclaration(function (item, position) {
+                                        var cursor = editor.doc.getCursor();
+                                        var line = editor.getLine(cursor.line);
+                                        var isSlash = item.keyCode === 191 || item.keyCode === 220;
+                                        var isQuote = item.keyCode === 222;
+
+                                        var isLoadOrRef = line.indexOf('#load') === 0
+                                            || line.indexOf('#r') === 0;
+
+                                        var isStartLoadOrRef = line === '#load "'
+                                            || line === '#r "'
+                                            || line === '#load @"'
+                                            || line === '#r @"';
+
+                                        if (isSlash && !isLoadOrRef) {
+                                            return;
+                                        }
+                                        if (isQuote && !isStartLoadOrRef) {
+                                            return;
+                                        }
+
+                                        var self = this;
+                                        $.ajax({
+                                            type: "POST",
+                                            datatype: "json",
+                                            url: bkHelper.serverUrl(serviceBase + "/fsharp/intellisense"),
+                                            data: { shellId: settings.shellID, code: editor.getValue(), lineIndex: cursor.line, charIndex: cursor.ch }
+                                        }).done(function (x) {
+                                            if (x.declarations.length > 1) {
+                                                var decls = intellisense.getDecls();
+                                                intellisense.setDeclarations(x.declarations);
+                                                intellisense.setStartColumnIndex(x.startIndex);
+
+                                                // if there is only one item after choosing it, just insert it
+                                                if (decls.getFilteredDeclarations().length === 1) {
+                                                    decls.setSelectedIndex(0);
+                                                    decls.triggerItemChosen(decls.getSelectedItem());
+                                                }
+                                            }
+                                        });
+                                    });
+                                    console.log('Intellisense applied to cell');
+                                }
+                            });
+                            timer = setTimeout(applyIntellisense, 1000);
+                        }
                         timer = setTimeout(applyIntellisense, 1000);
-                    }
-                    timer = setTimeout(applyIntellisense, 1000);
-                };
-                FSharpShell.prototype = FSharp;
-                shellReadyDeferred.resolve(FSharpShell);
+                    };
+                    FSharpShell.prototype = FSharp;
+                    shellReadyDeferred.resolve(FSharpShell);
+                });
             }).error(function ()
             {
                 console.log("failed to locate plugin service", PLUGIN_NAME, arguments);
