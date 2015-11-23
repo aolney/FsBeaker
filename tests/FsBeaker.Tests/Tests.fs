@@ -37,11 +37,11 @@ type TestClass() =
 
         let intellisense = client.Intellisense(code, 1, 7)
         Assert.NotNull(intellisense)
-        Assert.AreEqual(68, intellisense.Declarations.Length)
+        Assert.AreEqual(97, intellisense.Declarations.Length)
 
         let intellisense2 = client.Intellisense(code, 1, 8)
         Assert.NotNull(intellisense2)
-        Assert.AreEqual(68, intellisense2.Declarations.Length)
+        Assert.AreEqual(97, intellisense2.Declarations.Length)
 
     let testWorldBankDataAndIntellisense(client: ConsoleKernelClient) =
         let code2 = 
