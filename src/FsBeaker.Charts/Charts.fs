@@ -473,7 +473,7 @@ type Plot() =
 
 type TimePlot() =
     inherit XYChart()
-        override __.Type = "Time"
+        override __.Type = "TimePlot"
 
 type CombinedPlot() =
 
