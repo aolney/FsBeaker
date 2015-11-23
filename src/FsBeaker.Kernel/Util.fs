@@ -10,7 +10,46 @@ open System.Drawing.Imaging
 open System.Windows.Forms
 open FSharp.Charting
 open Newtonsoft.Json
+open Newtonsoft.Json.Linq
 
+[<CLIMutable(); JsonObject(MemberSerialization = MemberSerialization.OptOut)>]
+type DateTimeOutput =
+    { 
+        [<JsonProperty("type")>]
+        Type: string
+        [<JsonProperty("timestamp")>]
+        Timestamp: int64
+    }
+    static member OfDateTime(dateTime : DateTime) =
+        { Type = "Date"
+          Timestamp = int64 (dateTime.ToUniversalTime() - DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds }
+    static member OfDateTime(dateTime : DateTimeOffset) = DateTimeOutput.OfDateTime (dateTime.DateTime)
+
+
+type DateTimeConverter() = 
+    inherit JsonConverter()
+    override __.CanRead = true
+    override __.CanWrite = true
+    override __.CanConvert(objType : Type) = 
+        objType = typeof<DateTime> //|| objType = typeof<DateTimeOutput> 
+    override x.WriteJson(writer : JsonWriter, value : obj, serializer : JsonSerializer) = 
+        match value with
+        | :? DateTime as date ->
+            let date = value :?> DateTime
+            serializer.Serialize(writer, DateTimeOutput.OfDateTime date)
+        | _ -> serializer.Serialize(writer, value)
+    override x.ReadJson(reader : JsonReader, objectType : Type, value : obj, serializer : JsonSerializer) =
+        let jObject = JObject.Load(reader)
+        if jObject.Type = JTokenType.Object then
+            match jObject.TryGetValue("type") with
+            | true, t when t.Type = JTokenType.String && t.Value<string>() = "Date" ->
+                let d = jObject.ToObject<DateTimeOutput>()
+                let ts = TimeSpan.FromMilliseconds(float d.Timestamp)
+                DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Add(ts).ToLocalTime() :> obj
+            | _ -> value
+        else
+            value
+        
 [<CLIMutable(); JsonObject(MemberSerialization = MemberSerialization.OptOut)>]
 type BinaryOutput =
     { 

@@ -33,7 +33,7 @@ type NamespaceClient(session) =
 
     /// Sets the value
     member __.Set4(name, value, unset, sync) = 
-        let jsonValue = JsonConvert.SerializeObject(value)
+        let jsonValue = JsonConvert.SerializeObject(value,DateTimeConverter())
         let url = String.Format("{0}/set", urlBase)
         let v = if not <| unset then ["value", jsonValue] else []
         Http.RequestString
@@ -62,7 +62,7 @@ type NamespaceClient(session) =
                 query   = [ "name", name; "session", session ],
                 headers = [ "Authorization", auth ])
 
-        let binding = JsonConvert.DeserializeObject<NamespaceBinding<_>>(json)
+        let binding = JsonConvert.DeserializeObject<NamespaceBinding<_>>(json,DateTimeConverter())
         if not <| binding.Defined then failwithf "name not defined: %s" name
         binding.Value
 
