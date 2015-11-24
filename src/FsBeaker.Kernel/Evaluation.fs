@@ -21,9 +21,16 @@ module Evaluation =
                 Path.Combine(appHome,"lib")
             else
                 ""
+        let additionalArgs = 
+            let args = Environment.GetCommandLineArgs()
+            match args |> Seq.tryFindIndex (fun a -> a = "--fsiArgs") with
+            | Some i when i < args.Length - 1 -> 
+                args.[i + 1 .. ]
+            | _ -> Array.empty
         let options = 
             [| yield "--noninteractive"
                if appHome <> "" then yield "--lib:\"" + appHome + "\""
+               yield! additionalArgs
             |]
         FsiEvaluationSession.Create(fsiConfig, options, inStream, outStream, errStream)
 

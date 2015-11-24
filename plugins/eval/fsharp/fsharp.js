@@ -24,7 +24,10 @@ define(function (require, exports, bkSessionManager)
     var PLUGIN_NAME = "FSharp";
     var COMMAND = "fsharp/fsharpPlugin";
     var serviceBase = null;
+    var cometdUtil = bkHelper.getUpdateService();
     var timer = null;
+    var cancelFunction = null;
+
     var FSharp = {
         pluginName: PLUGIN_NAME,
         cmMode: "text/x-fsharp",
@@ -51,17 +54,27 @@ define(function (require, exports, bkSessionManager)
         evaluate: function (code, modelOutput)
         {
             var deferred = Q.defer();
-            var self = this;
-            var progressObj = {
-                type: "BeakerDisplay",
-                innertype: "Progress",
-                object: {
-                    message: "submitting ...",
-                    startTime: new Date().getTime()
-                }
-            };
 
-            modelOutput.result = progressObj;
+            if (cancelFunction) {
+                deferred.reject("An evaluation is already in progress");
+                return deferred.promise;
+            }
+
+            var self = this;
+            bkHelper.setupProgressOutput(modelOutput);
+            var progressObj = modelOutput.result;
+
+            cancelFunction = function () {
+                $.ajax({
+                    type: "POST",
+                    datatype: "json",
+                    url: bkHelper.serverUrl(serviceBase + "/fsharp/interrupt"),
+                    data: { shellId: self.settings.shellID }
+                }).done(function (ret) {
+                    console.log("done cancelExecution", ret);
+                });
+                bkHelper.setupCancellingOutput(modelOutput);
+            }
 
             $.ajax({
                 type: "POST",
@@ -70,6 +83,7 @@ define(function (require, exports, bkSessionManager)
                 data: { shellId: self.settings.shellID, code: code }
             }).done(function (ret)
             {
+                cancelFunction = null;
                 if (ret.status === 0)
                 {
                     if (ret.result.ContentType.indexOf("image/") === 0)
@@ -139,6 +153,23 @@ define(function (require, exports, bkSessionManager)
             });
         },
 
+        interrupt: function (cb)
+        {
+            var self = this;
+            $.ajax({
+                type: "POST",
+                datatype: "json",
+                url: bkHelper.serverUrl(serviceBase + "/fsharp/interrupt"),
+                data: { shellId: self.settings.shellID }
+            }).done(cb);
+        },
+
+        cancelExecution: function () {
+            if (cancelFunction) {
+                cancelFunction();
+            }
+        },
+
         exit: function (cb)
         {
             var self = this;
@@ -153,7 +184,9 @@ define(function (require, exports, bkSessionManager)
         updateShell: function (cb)
         {
             bkHelper.httpPost(bkHelper.serverUrl(serviceBase + "/fsharp/setShellOptions"), {
-                shellId: this.settings.shellID
+                shellId: this.settings.shellID,
+                fsiArgs: this.settings.fsiArgs,
+                useIntellisense: this.settings.useIntellisense
             }).success(cb);
         },
 
@@ -166,13 +199,11 @@ define(function (require, exports, bkSessionManager)
                 data: { shellId: self.settings.shellID }
             }).done(cb);
         },
-
+        reset: function (cb) { this.updateShell(bkHelper.show1ButtonModal); },
         spec: {
-            resetEnv: { type: "action", action: "resetEnvironment", name: "Reset Environment" },
+            resetEnv: { type: "action", action: "reset", name: "Reset Environment" },
             interrupt: { type: "action", action: "interrupt", name: "Interrupt" },
-            setup: { type: "settableString", action: "updateShell", name: "Setup Code" },
-            fsiArgs: { type: "settableString", action: "updateShell", name: "Additional FSI Arguments" },
-            useIntellisense: { type: "settableString", action: "updateShell", name: "Use Intellisense" }
+            fsiArgs: { type: "settableString", action: "reset", name: "Additional FSI Arguments" }
         }
     };
 
