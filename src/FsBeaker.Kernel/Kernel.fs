@@ -78,6 +78,7 @@ module KernelInternals =
         if line = null then 
             None 
         else 
+            //File.WriteAllText( DateTime.Now.Ticks.ToString(), sb.ToString())
             let bytes = Convert.FromBase64String(sb.ToString())
             let json = Encoding.UTF8.GetString(bytes)
             Some(json, sb.ToString())
@@ -147,6 +148,8 @@ type ConsoleKernel() =
 
     /// Processes a request to execute some code
     let processExecute(req: ExecuteRequest) =
+
+        //Console.WriteLine("Kernel received: {0}", req.Code )
 
         // clear errors and any output
         sbOut.Clear() |> ignore
@@ -257,15 +260,27 @@ type ConsoleKernelClient(p: Process) =
         
         /// Dispose of the process
         member __.Dispose() = 
-            p.Kill()
-            p.Dispose()
+            try
+                p.Kill()
+                p.Dispose()
+            with
+            | ex -> Console.WriteLine("Error on dispose: {0}", ex.Message )
 
     /// Show the dispose method
     member __.Dispose() = (__ :> IDisposable).Dispose()
 
     /// Starts a new instance of FsBeaker.Kernel.exe
     static member StartNewProcess() =
-        let procStart = ProcessStartInfo("FsBeaker.Kernel.exe")
+        //let procStart = ProcessStartInfo("FsBeaker.Kernel.exe")
+        //
+        let procStart = ProcessStartInfo()
+        match Environment.OSVersion.Platform with
+        | PlatformID.MacOSX | PlatformID.Unix ->
+            //Console.WriteLine("Kernel starting with Mono")
+            procStart.FileName <- "mono"
+            procStart.Arguments <- "FsBeaker.Kernel.exe"
+        | _ -> procStart.FileName <- "FsBeaker.Kernel.exe"
+        //
         procStart.RedirectStandardError <- true
         procStart.RedirectStandardInput <- true
         procStart.RedirectStandardOutput <- true

@@ -3,7 +3,7 @@
 
 // load base dlls
 #r "FSharp.Charting.dll"
-#r "FSharp.Data.TypeProviders.dll"
+//#r "FSharp.Data.TypeProviders.dll"
 #r "System.Data.dll"
 #r "System.Windows.Forms.DataVisualization.dll"
 #r "FsBeaker.Kernel.exe"

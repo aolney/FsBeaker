@@ -66,15 +66,16 @@ type TestClass() =
 
         // test sync
         testSimpleExecute client 
-        testChartAndIntellisense client
-        testWorldBankDataAndIntellisense client
+//        testChartAndIntellisense client
+//        testWorldBankDataAndIntellisense client
 
         // test async
         let testAll() =
             testSimpleExecute client 
             testChartAndIntellisense client
             testWorldBankDataAndIntellisense client
-
-        Async.Parallel [for i in 0..20 -> async { testAll() }]
-        |> Async.RunSynchronously
-        |> ignore
+        
+        ()
+//        Async.Parallel [for i in 0..20 -> async { testAll() }]
+//        |> Async.RunSynchronously
+//        |> ignore
