@@ -15,6 +15,7 @@ module Evaluation =
     let internal errStream = new StringWriter(sbErr)
     let internal fsiConfig = FsiEvaluationSession.GetDefaultConfiguration()
     let internal fsiEval = FsiEvaluationSession.Create(fsiConfig, [|"--noninteractive"|], inStream, outStream, errStream)
+    //let internal fsiEval = FsiEvaluationSession.Create(fsiConfig, [|"--noninteractive";"--readline-"|], inStream, outStream, errStream)
 
     /// Converts a character offset inside a string into a lineIndex and charIndex
     let PreprocessSource (source:string, character) =

@@ -11,7 +11,7 @@ module Logging =
 
     let internal log(msg) = 
         try File.AppendAllText("log.txt", msg) with _ -> ()
-        stdout.WriteLine(msg)
+        stderr.WriteLine(msg)
 
     let logMessage(m) = log(m)
 

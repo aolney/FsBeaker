@@ -22,9 +22,10 @@ let main args =
         0
 
     | None ->
-        
+        stderr.WriteLine("Invalid port '{0}', killing kernel and nginx", args.[0] )
         for p in Process.GetProcessesByName("FsBeaker.Kernel") do p.Kill()
         for p in Process.GetProcessesByName("nginx") do p.Kill()
+        stderr.WriteLine("Launching '{0}'", args.[0] )
         let launcher = args.[0]
         let psi = ProcessStartInfo(launcher)
         psi.WorkingDirectory <- Path.GetDirectoryName(launcher)

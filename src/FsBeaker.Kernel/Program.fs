@@ -8,7 +8,9 @@ let main _ =
 
     try
         let kernel = ConsoleKernel()
+        Logging.logMessage( "starting kernel at " + System.DateTime.Now.ToLongTimeString() )
         kernel.Start()
+        Logging.logMessage( "kernel quit unexpectedly at " + System.DateTime.Now.ToLongTimeString())
         0
     with 
         ex -> 

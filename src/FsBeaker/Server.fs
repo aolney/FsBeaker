@@ -49,6 +49,10 @@ module Server =
         let shell = shells.[shellId]
         if shell.Process.HasExited then
             failwithf "Kernel with shellId `%s` exited unexpectedly" shellId
+        shell.Process.Refresh()
+        if shell.Process.Responding then
+            stderr.WriteLine("Status = Running");
+                        
         shell
 
     /// Creates a new shell with the specified id

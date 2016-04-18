@@ -70,12 +70,18 @@ module KernelInternals =
     /// Keeps reading from the reader until "##" is encountered
     let readBlock(reader: TextReader) = 
         let sb = StringBuilder()
+        let start = System.DateTime.Now
         let mutable line = readLine reader
+        let elapsed = (System.DateTime.Now - start).TotalMilliseconds
+        if elapsed < 1000.0 then
+            Logging.logMessage( String.Format("Read to stdin blocked for {0} milliseconds", elapsed.ToString()) )
+
         while line <> separator && line <> null do
             sb.AppendLine(line) |> ignore
             line <- readLine reader
 
         if line = null then 
+            Logging.logMessage ("On readBlock, received null following " + sb.ToString())
             None 
         else 
             //File.WriteAllText( DateTime.Now.Ticks.ToString(), sb.ToString())
@@ -144,12 +150,14 @@ type ConsoleKernel() =
         
         else
 
-            { Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+            //{ Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+            { Result = { ContentType = "text/plain"; Data = sbErr.ToString() + " 00000 " + GetLastExpression().Value.ToString()  }; Status = ExecuteReponseStatus.Error }
 
     /// Processes a request to execute some code
     let processExecute(req: ExecuteRequest) =
 
         //Console.WriteLine("Kernel received: {0}", req.Code )
+        Logging.logMessage( String.Format("process execute received: {0}", req.Code ))
 
         // clear errors and any output
         sbOut.Clear() |> ignore
@@ -160,6 +168,7 @@ type ConsoleKernel() =
             try
                 eval req.Code
             with ex -> 
+                Logging.logException ex
                 { Result = { ContentType = "text/plain"; Data = ex.Message + ": " + sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
 
         sendObj response
@@ -189,11 +198,14 @@ type ConsoleKernel() =
             processCommands json
             loop()
         | None ->
+            Logging.logMessage( "kernel failed in loop(), readBlock is None ")
             failwith "Stream ended unexpectedly"
 
     /// Executes the header code and then carries on
     let start() = 
-        ignore <| eval headerCode
+        Logging.logMessage( String.Format("evaluating header code: {0}", headerCode ))
+        let headerEvalResult = eval headerCode
+        Logging.logMessage( String.Format("Header result: {0}", headerEvalResult ))
         loop()
 
     // Start the kernel by looping forever
@@ -208,6 +220,7 @@ type ConsoleKernelClient(p: Process) =
     /// Sends a line
     let sendLine(str:string) = 
         writer.WriteLine(str)
+        Logging.logMessage( String.Format("Sent kernel: {0}", str ))
         writer.Flush()
 
     /// Sends an object to the process and blocks until something is sent back
@@ -271,14 +284,11 @@ type ConsoleKernelClient(p: Process) =
 
     /// Starts a new instance of FsBeaker.Kernel.exe
     static member StartNewProcess() =
-        //let procStart = ProcessStartInfo("FsBeaker.Kernel.exe")
-        //
         let procStart = ProcessStartInfo()
         match Environment.OSVersion.Platform with
         | PlatformID.MacOSX | PlatformID.Unix ->
-            //Console.WriteLine("Kernel starting with Mono")
             procStart.FileName <- "mono"
-            procStart.Arguments <- "FsBeaker.Kernel.exe"
+            procStart.Arguments <- Path.Combine( Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "FsBeaker.Kernel.exe" )
         | _ -> procStart.FileName <- "FsBeaker.Kernel.exe"
         //
         procStart.RedirectStandardError <- true
