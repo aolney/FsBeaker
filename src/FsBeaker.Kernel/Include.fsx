@@ -2,6 +2,7 @@
 #I "{0}"
 
 // load base dlls
+// NOTE: some of these are commented out because they are Windows-specific
 //#r "FSharp.Charting.dll"
 //#r "FSharp.Data.TypeProviders.dll"
 //#r "System.Data.dll"

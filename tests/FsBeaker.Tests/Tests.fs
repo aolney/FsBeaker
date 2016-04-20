@@ -113,6 +113,8 @@ type TestClass() =
         testNamespace client 
         System.Console.Error.WriteLine( "Testing script loading" )
         testIncludeFsx client
+
+        //NOTE: these are not currently cross platform
 //        testChartAndIntellisense client
 //        testWorldBankDataAndIntellisense client
 

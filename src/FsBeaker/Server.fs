@@ -49,9 +49,6 @@ module Server =
         let shell = shells.[shellId]
         if shell.Process.HasExited then
             failwithf "Kernel with shellId `%s` exited unexpectedly" shellId
-        shell.Process.Refresh()
-        if shell.Process.Responding then
-            stderr.WriteLine("Status = Running");
                         
         shell
 
@@ -105,6 +102,9 @@ module Server =
                 OK <| newShell(shellId)
             )
 
+        /// The ready API call
+        let ready r = OK <| "ok"
+
         /// The evaluate API call
         let evaluate(c: HttpContext) = 
             let r = c.request
@@ -144,6 +144,7 @@ module Server =
         let app = 
             choose [
                 POST >>= choose [
+                    url "/fsharp/ready"             >>= set_header "Content-Type" "text/plain"       >>= request ready
                     url "/fsharp/getShell"          >>= set_header "Content-Type" "text/plain"       >>= request getShell
                     url "/fsharp/evaluate"          >>= set_header "Content-Type" "application/json" >>= context evaluate
                     url "/fsharp/intellisense"      >>= set_header "Content-Type" "application/json" >>= request intellisense
