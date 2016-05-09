@@ -144,7 +144,8 @@ module Server =
         let app = 
             choose [
                 POST >>= choose [
-                    url "/fsharp/ready"             >>= set_header "Content-Type" "text/plain"       >>= request ready
+                    //url "/fsharp/ready"             >>= set_header "Content-Type" "text/plain"       >>= request ready
+                    url "/fsharp/ready"             >>= OK "ok"
                     url "/fsharp/getShell"          >>= set_header "Content-Type" "text/plain"       >>= request getShell
                     url "/fsharp/evaluate"          >>= set_header "Content-Type" "application/json" >>= context evaluate
                     url "/fsharp/intellisense"      >>= set_header "Content-Type" "application/json" >>= request intellisense

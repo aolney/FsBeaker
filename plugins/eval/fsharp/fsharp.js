@@ -24,9 +24,7 @@ define(function (require, exports, bkSessionManager)
     var PLUGIN_NAME = "FSharp";
     var COMMAND = "fsharp/fsharpPlugin";
     var serviceBase = null;
-    //
-    var cometdUtil = bkHelper.getUpdateService();
-    //
+
     var timer = null;
     var FSharp = {
         pluginName: PLUGIN_NAME,
@@ -178,18 +176,7 @@ define(function (require, exports, bkSessionManager)
             }).success(function (ret)
             {
                 serviceBase = ret;
-                //
-                bkHelper.spinUntilReady(bkHelper.serverUrl(serviceBase + "/fsharp/ready")).then(function () {
-		        if (window.languageServiceBase == undefined) {
-		          window.languageServiceBase = {};
-		        }
-		        window.languageServiceBase[PLUGIN_NAME] = bkHelper.serverUrl(serviceBase + '/fsharp');
-		        if (window.languageUpdateService == undefined) {
-		          window.languageUpdateService = {};
-		        }
-		        window.languageUpdateService[PLUGIN_NAME] = cometdUtil;
-		        cometdUtil.init(PLUGIN_NAME, serviceBase);
-        		//
+
                 var FSharpShell = function (settings, doneCB)
                 {
                     var self = this;
@@ -309,12 +296,7 @@ define(function (require, exports, bkSessionManager)
                 };
                 FSharpShell.prototype = FSharp;
                 shellReadyDeferred.resolve(FSharpShell);
-                //
-                }, function () {
-		        console.log("plugin service failed to become ready", PLUGIN_NAME, arguments);
-		        shellReadyDeferred.reject("plugin service failed to become ready");
-		      });
-		      //
+                
             }).error(function ()
             {
                 console.log("failed to locate plugin service", PLUGIN_NAME, arguments);
