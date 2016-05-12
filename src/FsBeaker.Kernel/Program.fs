@@ -1,4 +1,4 @@
-﻿open FsBeaker.Kernel
+open FsBeaker.Kernel
 open System.IO
 
 [<EntryPoint>]

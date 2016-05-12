@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Charts
+namespace FsBeaker.Charts
 
 open System
 open System.Drawing
@@ -134,13 +134,32 @@ type Crosshair() =
     member self.WithWidth(x) = setAndReturn self self.set_Width x
     member self.WithColor(x) = setAndReturn self self.set_Color x
 
+type DateTimeChartConverter() =
+    inherit JsonConverter()
+    override __.CanRead = false
+    override __.CanWrite = true
+    override __.CanConvert(objType : Type) = objType = typeof<DateTime []> 
+    override x.WriteJson(writer : JsonWriter, value : obj, serializer : JsonSerializer) = 
+        let v = value :?> obj []
+        if v.Length > 0 && v.[0] :? DateTime then
+            v
+            |> Array.map
+                (fun o -> 
+                    let date = o :?> DateTime
+                    (date.ToUniversalTime() - DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds |> int64
+                )
+            |> (fun dateArray -> serializer.Serialize(writer, dateArray))
+        else
+            serializer.Serialize(writer, value)
+    override x.ReadJson(reader : JsonReader, objectType : Type, value : obj, serializer : JsonSerializer) = failwith "DateTimeChartConverter is write only"
+
 [<AbstractClass>]
 type XYGraphics() =
 
     [<JsonProperty("type")>]
     abstract member Type : string with get
 
-    [<JsonProperty("x")>]
+    [<JsonProperty("x"); JsonConverter(typeof<DateTimeChartConverter>)>]
     member val X : obj[] = [||] with get, set
 
     [<JsonProperty("y")>]
@@ -473,7 +492,7 @@ type Plot() =
 
 type TimePlot() =
     inherit XYChart()
-        override __.Type = "Time"
+        override __.Type = "TimePlot"
 
 type CombinedPlot() =
 

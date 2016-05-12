@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Kernel
+namespace FsBeaker.Kernel
 
 /// Logging module. This is really crude right now and just writes
 /// to log.txt using File.WriteAllText(...)

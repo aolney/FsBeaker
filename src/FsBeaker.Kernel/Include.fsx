@@ -1,4 +1,4 @@
-﻿// include directory, this will be replaced by the kernel
+// include directory, this will be replaced by the kernel
 #I "{0}"
 
 // load base dlls

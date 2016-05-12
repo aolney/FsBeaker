@@ -1,7 +1,8 @@
-﻿namespace FsBeaker
+namespace FsBeaker
 
 open System
 open System.Collections.Generic
+open System.Collections.Concurrent
 open System.Net
 
 open FsBeaker.Kernel
@@ -44,7 +45,14 @@ module Server =
         CharIndex: int
     }
 
-    let internal shells = Dictionary<string, ConsoleKernelClient>()
+    [<CLIMutable(); JsonObject(MemberSerialization = MemberSerialization.OptOut)>]
+    type SetShellOptionsRequest = {
+        ShellId: string
+        SetupCode : string
+        FsiArgs : string
+    }
+
+    let internal shells = ConcurrentDictionary<string, ConsoleKernelClient>()
     let internal findShell shellId = 
         let shell = shells.[shellId]
         if shell.Process.HasExited then
@@ -52,22 +60,29 @@ module Server =
                         
         shell
 
-    /// Creates a new shell with the specified id
-    let internal newShell(shellId) = 
+    /// dispose shell and remove dictionary entry
+    let internal killShell shellId = 
+        let scc,v = shells.TryRemove(shellId)
+        if scc then
+            v.Dispose()
+        scc
+
+    /// Gets shell with the specified id if it exits otherwise a new shell is started and new id returned
+    let internal getShell(shellId) = 
         if shells.ContainsKey(shellId) then
             shellId
         else
             let shellId = Guid.NewGuid().ToString()
-            shells.Add(shellId, ConsoleKernelClient.StartNewProcess())
+            shells.GetOrAdd(shellId,(fun _ -> ConsoleKernelClient.StartNewProcess())) |> ignore
             shellId
 
     /// Starts the server on the specified port
     let start port =
     
-        /// The configuration is the default listening to localhost:port (127.0.0.1).
+        /// The configuration is the default listening to localhost:port.
         let config = {
-            default_config with
-                bindings = [ { scheme = HTTP; ip = IPAddress.Parse("127.0.0.1"); port = port } ]
+            defaultConfig with
+                bindings = [ HttpBinding.mk HTTP IPAddress.Loopback port ]
             }
 
         /// Scrubs the code of tabs and replaces them with four spaces
@@ -76,11 +91,10 @@ module Server =
         /// Requires that a parameter be present by name in the request. If the parameter
         /// is not in the request, then BAD_REQUEST is returned, otherwise the function is called
         /// with the parsed out parameter.
-        let required request parameterName f =
-            let q = form request
-            match q ^^ parameterName with
-            | None -> BAD_REQUEST("Parameter not supplied " + parameterName)
-            | Some(v) -> f(v)
+        let required (request : HttpRequest) parameterName f =
+            match request.formData parameterName with
+            | Choice2Of2 msg -> BAD_REQUEST("Parameter not supplied " + parameterName)
+            | Choice1Of2 (v) -> f(v)
 
         /// Requires that a parameter be present by name in the request and be an integer. If the parameter
         /// is not in the request, then BAD_REQUEST is returned. If the parameter is not an integer, then 
@@ -99,7 +113,7 @@ module Server =
         /// The getShell API call
         let getShell r = 
             required r "shellId" (fun shellId ->
-                OK <| newShell(shellId)
+                OK <| getShell(shellId) //TODO: confirm that returning a new shellId if requested one is not available is the right thing to do.
             )
 
         /// The ready API call
@@ -141,22 +155,59 @@ module Server =
                 )
             )
 
+        ///reset shellId
+        let resetEnvironment (r : HttpRequest) = 
+            let optionalString name = 
+                match r.formData name with
+                | Choice2Of2 _ -> ""
+                | Choice1Of2 v -> v
+            required r "shellId" (fun shellId ->
+                //let fsiArgs = optionalString "fsiArgs"
+                if killShell shellId then
+                    //if shells.TryAdd(shellId, ConsoleKernelClient.StartNewProcess(fsiArgs)) then
+                    if shells.TryAdd(shellId, ConsoleKernelClient.StartNewProcess()) then
+                        OK <| "Shell reset"
+                    else
+                        OK <| "Could not recreate shell"
+                else
+                    OK <| "Could not find shell"
+            )
+            
+        ///exit given shell id
+        let exit r = 
+            required r "shellId" 
+                (fun shellId ->
+                    killShell shellId |> ignore
+                    OK shellId //TODO: not sure what the response should be
+                )
+
+        ///Interrupt hosted FSI given shellId
+        let interrupt r =
+            required r "shellId" 
+                (fun shellId ->
+                    let shell = findShell shellId
+                    shell.Interrupt()
+                    OK "" //TODO: not sure what the response should be
+                )
+
         let app = 
             choose [
                 POST >>= choose [
-                    //url "/fsharp/ready"             >>= set_header "Content-Type" "text/plain"       >>= request ready
-                    url "/fsharp/ready"             >>= OK "ok"
-                    url "/fsharp/getShell"          >>= set_header "Content-Type" "text/plain"       >>= request getShell
-                    url "/fsharp/evaluate"          >>= set_header "Content-Type" "application/json" >>= context evaluate
-                    url "/fsharp/intellisense"      >>= set_header "Content-Type" "application/json" >>= request intellisense
-                    url "/fsharp/exit"              >>= OK "Not yet implemented"
-                    url "/fsharp/cancelExecution"   >>= OK "Not yet implemented"
-                    url "/fsharp/killAllThreads"    >>= OK "Not yet implemented"
-                    url "/fsharp/resetEnvironment"  >>= OK "Not yet implemented"
-                    url "/fsharp/setShellOptions"   >>= OK "Not yet implemented"
+                    path "/fsharp/getShell"          >>= setHeader "Content-Type" "text/plain"       >>= request getShell
+                    path "/fsharp/evaluate"          >>= setHeader "Content-Type" "application/json" >>= context evaluate
+                    path "/fsharp/intellisense"      >>= setHeader "Content-Type" "application/json" >>= request intellisense
+                    path "/fsharp/exit"              >>= setHeader "Content-Type" "text/plain"       >>= request exit
+                    path "/fsharp/interrupt"         >>= setHeader "Content-Type" "text/plain"       >>= request interrupt
+                    path "/fsharp/killAllThreads"    >>= OK "Not yet implemented"
+                    path "/fsharp/resetEnvironment"  >>= setHeader "Content-Type" "text/plain" >>= request resetEnvironment
+                    path "/fsharp/setShellOptions"   >>= setHeader "Content-Type" "text/plain" >>= request resetEnvironment
+                ]
+                GET >>= choose [
+                    path "/fsharp/ready"             >>= OK "ok"
                 ]
                 NOT_FOUND "404"
             ]
-
+            
         stdout.WriteLine("Successfully started server")
-        web_server config app
+        startWebServer config app
+        

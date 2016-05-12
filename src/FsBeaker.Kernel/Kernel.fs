@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Kernel
+namespace FsBeaker.Kernel
 
 open System
 open System.IO
@@ -6,6 +6,8 @@ open System.Text
 open Newtonsoft.Json
 open System.Diagnostics
 open System.Reflection
+open System.Threading.Tasks
+open System.Threading
 
 [<CLIMutable(); JsonObject(MemberSerialization = MemberSerialization.OptOut)>]
 type Table = {
@@ -57,6 +59,63 @@ and ExecuteReponseStatus = OK = 0 | Error = 1
 type ShellRequest =
     | Intellisense of IntellisenseRequest
     | Execute of ExecuteRequest
+    | Interrupt
+
+type ProcessingState =
+    | Executing
+    | Idle
+
+///Helper to allow FsiEvaluationSession to be Interrupted.
+///At this time the interrupt method on FsiEvaluationSession only works when FsiEvaluationSession.Run is used.
+type AbortableExecute() =
+    let mutable disposed = false
+    let mutable state = Idle
+    let mutable executeSignal = new AutoResetEvent(false)
+    let mutable action = fun () -> ()
+    let mutable abort = false
+    let thread = 
+        Threading.Thread
+            (fun () ->
+                let rec loop() =
+                    try
+                        executeSignal.WaitOne() |> ignore
+                        action()
+                        action <- fun () -> ()
+                        state <- Idle
+                        loop()
+                    with
+                    | :? ThreadAbortException as e when abort = true ->
+                        executeSignal.Dispose()
+                        executeSignal <- null
+                    | e ->
+                        action <- fun () -> ()
+                        state <- Idle
+                        loop ()
+                loop())
+    do 
+        thread.Start()
+    member x.State = state
+    member x.Interrupt() = thread.Abort()
+    ///Execute action iff state is idle
+    member x.Execute(f) = 
+        match state with
+        | Idle ->
+            state <- Executing
+            action <- f
+            executeSignal.Set() |> ignore
+            true
+        | _ -> false
+    member x.Dispose() = 
+        x.Dispose(true)
+        System.GC.SuppressFinalize(x)
+    member x.Dispose(disposing) = 
+        if not disposed then
+            if disposing then
+                abort <- true
+                thread.Abort()
+            disposed <- true
+    interface System.IDisposable with
+        member x.Dispose() = x.Dispose()
 
 [<AutoOpen>]
 module KernelInternals = 
@@ -94,13 +153,15 @@ module KernelInternals =
 /// json data back to the console
 type ConsoleKernel() =
    
+    /// Wrapped thread for code execution
+    let executionThread = new AbortableExecute()
+    
     /// Gets the header code to prepend to all items
     let headerCode = 
         let file = FileInfo(Assembly.GetEntryAssembly().Location)
         let dir = file.Directory.FullName
         let includeFile = Path.Combine(dir, "Include.fsx")
-        let code = File.ReadAllText(includeFile)
-        String.Format(code, dir.Replace("\\", "\\\\"))
+        File.ReadAllText(includeFile)
 
     /// Sends a line
     let sendLine(str:string) = 
@@ -116,39 +177,45 @@ type ConsoleKernel() =
 
     /// Evaluates the specified code
     let eval (code: string) =
+        let consoleOut = System.Console.Out
+        Console.SetOut outStream //capture output written to console during FSI eval
+        try
+            fsiEval.EvalInteraction(code)
+            Console.SetOut consoleOut
+            let error = sbErr.ToString()
+            if String.IsNullOrWhiteSpace(error) then 
 
-        fsiEval.EvalInteraction(code)
+                // return results (not yet)
+                let result = 
+                    match GetLastExpression() with
+                    | Some(it) -> 
+                            
+                        let secondaryType = 
+                            match it.ReflectionValue with
+                            | null -> typeof<obj>
+                            | _ -> it.ReflectionValue.GetType()
 
-        let error = sbErr.ToString()
-        if String.IsNullOrWhiteSpace(error) then 
+                        let printer = Printers.findDisplayPrinter(it.ReflectionType, secondaryType)
+                        let (_, callback) = printer
+                        callback(it.ReflectionValue)
 
-            // return results (not yet)
-            let result = 
-                match GetLastExpression() with
-                | Some(it) -> 
-                        
-                    let secondaryType = 
-                        match it.ReflectionValue with
-                        | null -> typeof<obj>
-                        | _ -> it.ReflectionValue.GetType()
+                    | None -> 
+                            
+                        { ContentType = "text/plain"; Data = "" }
 
-                    let printer = Printers.findDisplayPrinter(it.ReflectionType, secondaryType)
-                    let (_, callback) = printer
-                    callback(it.ReflectionValue)
+                { Result = result; Status = ExecuteReponseStatus.OK }
+            
+            else
 
-                | None -> 
-                        
-                    { ContentType = "text/plain"; Data = "" }
-
-            { Result = result; Status = ExecuteReponseStatus.OK }
-        
-        else
-
-            { Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+                { Result = { ContentType = "text/plain"; Data = sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
+        with
+        | e ->
+            Console.SetOut consoleOut
+            { Result = { ContentType = "text/plain"; Data = e.Message + "\r\n" + sbErr.ToString()}; Status = ExecuteReponseStatus.Error }
+            
 
     /// Processes a request to execute some code
     let processExecute(req: ExecuteRequest) =
-
         // clear errors and any output
         sbOut.Clear() |> ignore
         sbErr.Clear() |> ignore
@@ -160,7 +227,7 @@ type ConsoleKernel() =
             with ex -> 
                 { Result = { ContentType = "text/plain"; Data = ex.Message + ": " + sbErr.ToString() }; Status = ExecuteReponseStatus.Error }
 
-        sendObj response
+        sendObj response 
 
     /// Gets the intellisense information and sends it back
     let processIntellisense(req: IntellisenseRequest) =
@@ -174,9 +241,11 @@ type ConsoleKernel() =
     /// Process commands
     let processCommands block = 
         let shellRequest = JsonConvert.DeserializeObject<ShellRequest>(block)
-        match shellRequest with
-        | Intellisense(x) -> processIntellisense(x)
-        | Execute(x) -> processExecute(x)
+        match executionThread.State,shellRequest with
+        | Idle, Intellisense(x) -> processIntellisense(x)
+        | Idle, Execute(x) -> executionThread.Execute(fun () -> processExecute(x)) |> ignore
+        | Executing, Interrupt -> executionThread.Interrupt()
+        | _ -> () //Ignore all other cases. Do not want any output here else we might disturb a client waiting for exec results.
 
     /// The main loop
     let rec loop() =
@@ -187,6 +256,7 @@ type ConsoleKernel() =
             loop()
         | None ->
             Logging.logMessage( "kernel failed in loop(), readBlock is None ")
+            executionThread.Dispose()
             failwith "Stream ended unexpectedly"
 
     /// Executes the header code and then carries on
@@ -200,6 +270,9 @@ type ConsoleKernel() =
 /// API for sending commands to a ConsoleKernel
 type ConsoleKernelClient(p: Process) = 
 
+    let writeLock = obj()
+    let readLock = obj()
+
     let reader = p.StandardOutput
     let writer = p.StandardInput
 
@@ -207,28 +280,30 @@ type ConsoleKernelClient(p: Process) =
     let sendLine(str:string) = 
         writer.WriteLine(str)
         writer.Flush()
+        
+    /// Sends on object to the process
+    let sendObj (o : obj) =
+        lock writeLock 
+            (fun () ->
+                let v = 
+                    match o with 
+                    | :? IntellisenseRequest as x -> Intellisense(x)
+                    | :? ExecuteRequest as x -> Execute(x)
+                    | :? ShellRequest as x -> x
+                    | _ -> failwith "Invalid object to send"
+
+                let json = JsonConvert.SerializeObject(v)
+                let bytes = Encoding.UTF8.GetBytes(json)
+                let encodedJson = Convert.ToBase64String(bytes)
+                sendLine <| encodedJson
+                sendLine <| separator)
 
     /// Sends an object to the process and blocks until something is sent back
     let sendAndGet(o:obj) =
-
-        /// Sends on object to the process
-        let sendObj() =
-
-            let v = 
-                match o with 
-                | :? IntellisenseRequest as x -> Intellisense(x)
-                | :? ExecuteRequest as x -> Execute(x)
-                | _ -> failwith "Invalid object to send"
-
-            let json = JsonConvert.SerializeObject(v)
-            let bytes = Encoding.UTF8.GetBytes(json)
-            let encodedJson = Convert.ToBase64String(bytes)
-            sendLine <| encodedJson
-            sendLine <| separator
-
-        lock p (fun () ->
-            sendObj()
-            readBlock reader)
+        lock readLock 
+            (fun () ->
+                sendObj o
+                readBlock reader)
 
     /// The process
     member __.Process = p
@@ -252,6 +327,9 @@ type ConsoleKernelClient(p: Process) =
     /// Performs intellisense functionality
     member __.Intellisense(code, lineIndex, charIndex) =
         __.Intellisense({ Code = code; LineIndex = lineIndex; CharIndex = charIndex })
+
+    /// Interrupt hosted FSI
+    member __.Interrupt() = sendObj Interrupt
 
     /// IDisposable, disposes of the process    
     interface IDisposable with
@@ -281,5 +359,4 @@ type ConsoleKernelClient(p: Process) =
         procStart.RedirectStandardOutput <- true
         procStart.UseShellExecute <- false
         procStart.CreateNoWindow <- true
-
         new ConsoleKernelClient(Process.Start(procStart))

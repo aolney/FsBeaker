@@ -1,4 +1,4 @@
-﻿// include directory, this will be replaced by the kernel
+// include directory, this will be replaced by the kernel
 #I "D:\\BayardRockGithub\\FsBeaker\\FsBeaker.Kernel\\bin\\Debug"
 
 // load base dlls

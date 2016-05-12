@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Kernel
+namespace FsBeaker.Kernel
 
 open System
 open System.Linq
@@ -86,6 +86,11 @@ module Printers =
 
         // add XYChart printer
         addDisplayPrinter(fun (x:Plot) ->
+            { ContentType = "chart"; Data = x }
+        )
+        
+        // add TimePlot printer
+        addDisplayPrinter(fun (x:TimePlot) ->
             { ContentType = "chart"; Data = x }
         )
 

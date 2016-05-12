@@ -1,4 +1,4 @@
-﻿module Config
+module Config
 
 open System
 open System.Configuration

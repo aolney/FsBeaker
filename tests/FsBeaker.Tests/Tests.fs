@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Tests
+namespace FsBeaker.Tests
 
 open NUnit.Framework
 open System.Text
@@ -59,11 +59,11 @@ type TestClass() =
 
         let intellisense = client.Intellisense(code, 1, 7)
         Assert.NotNull(intellisense)
-        Assert.AreEqual(68, intellisense.Declarations.Length)
+        Assert.AreEqual(97, intellisense.Declarations.Length)
 
         let intellisense2 = client.Intellisense(code, 1, 8)
         Assert.NotNull(intellisense2)
-        Assert.AreEqual(68, intellisense2.Declarations.Length)
+        Assert.AreEqual(97, intellisense2.Declarations.Length)
 
     ///We removed the type provider reference so I don't expect this to work either
     let testWorldBankDataAndIntellisense(client: ConsoleKernelClient) =

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * An item that is displayed within the declarations user interface.
  * @class DeclarationItem
  */

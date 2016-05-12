@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Kernel
+namespace FsBeaker.Kernel
 
 open NuGet
 open NuGet.Commands

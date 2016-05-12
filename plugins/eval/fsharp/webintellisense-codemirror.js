@@ -1,4 +1,4 @@
-﻿/**
+/**
  * This class provides intellisense for either a textarea or an inputbox.
  * Triggers can be added 
  * 

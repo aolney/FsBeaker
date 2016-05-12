@@ -1,4 +1,4 @@
-﻿namespace FsBeaker.Kernel.Tests
+namespace FsBeaker.Kernel.Tests
 
 open System.Reflection
 open FsBeaker.Kernel

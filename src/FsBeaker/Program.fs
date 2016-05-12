@@ -1,4 +1,4 @@
-﻿open System
+open System
 open System.Diagnostics
 open System.IO
 open FsBeaker

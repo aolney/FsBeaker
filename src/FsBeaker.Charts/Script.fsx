@@ -1,4 +1,4 @@
-﻿#r "../../packages/Newtonsoft.Json.6.0.6/lib/net40/Newtonsoft.Json.dll"
+#r "../../packages/Newtonsoft.Json.6.0.6/lib/net40/Newtonsoft.Json.dll"
 #load "Charts.fs"
 
 open System
