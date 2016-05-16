@@ -3,8 +3,11 @@ This is a fork of the [excellent F# plugin for Beaker Notebook](https://github.c
 
 This fork focusses on functionality from Linux and the Docker container.
 
+#I'm impatient
+No problem, go ahead and [pull a Docker image with Beaker and the FSharp plugin installed](https://hub.docker.com/r/aolney/beaker/).
+
 #Building and Installation
-To use:
+To build and install:
 - Clone this repo
 - Run build.sh
 - [Install docker](https://docs.docker.com/engine/installation/)
@@ -29,6 +32,22 @@ Some features of the original plugin are currently disabled because of cross pla
 - Type providers
 - FSharp.Charting
 
-Intellisense should work though. Autotranslation should also work.
+These were previously loaded automatically in include.fsx, called during plugin start up.
 
-* [Auto translation example](http://sharing.beakernotebook.com/gist/anonymous/74dfd416da6ade4ebfe5)
+Core working features:
+- Intellisense
+- [Autotranslation](https://pub.beakernotebook.com/#/publications/7ae86a62-1b9f-11e6-9ac6-ff57a01b25df)
+
+Here is an example of autotranslation using the `beaker` object (built in).
+
+Assign 3 to x such that it can be called from other languages:
+
+`beaker?x<-3`
+
+Retrieve the value of x assigned in another language:
+
+`beaker?x`
+
+#Learn more about Beaker Notebooks
+- [Wiki](https://github.com/twosigma/beaker-notebook/wiki)
+- [Examples](https://pub.beakernotebook.com/#/publications/featured)
