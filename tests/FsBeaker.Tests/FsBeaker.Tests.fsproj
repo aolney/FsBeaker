@@ -60,6 +60,7 @@
     <None Include="app.config" />
     <None Include="Script.fsx" />
     <Content Include="paket.references" />
+    <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Charting">
@@ -77,7 +78,6 @@
     </Reference>
     <Reference Include="nunit.framework">
       <HintPath>..\..\packages\NUnit\lib\nunit.framework.dll</HintPath>
-      <Package>nunit</Package>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
