@@ -15,14 +15,16 @@ let main _ =
             let log(msg) =
                 Logging.log(msg)
                 stdout.WriteLine(msg) 
+            
+            log ("\n\nBegin Kernel Exception Log\n\n")
 
             let err = Evaluation.sbErr.ToString()
             let std = Evaluation.sbOut.ToString()
 
-            log ("Evaluation ERR: " + err)
-            log ("Evaluation STD: " + std)
+            log ("\nEvaluation ERR: " + err)
+            log ("\nEvaluation STD: " + std)
 
-            log ("Stack trace:")
+            log ("\nStack trace:")
             log (ex.Message)
             log (ex.CompleteStackTrace())
             log ("")
