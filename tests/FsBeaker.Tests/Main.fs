@@ -1,5 +1,4 @@
-﻿module FsBeaker.Tests
-
+﻿open FsBeaker.Tests
 open NUnit.Framework
 open System.Text
 open FsBeaker
