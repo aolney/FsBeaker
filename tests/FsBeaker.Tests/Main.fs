@@ -1,10 +1,15 @@
-﻿open FsBeaker.Tests
+﻿module FsBeaker.Tests.Main
+
+open FsBeaker.Tests
 open NUnit.Framework
 open System.Text
 open FsBeaker
 open FsBeaker.Kernel
 
-[<EntryPoint>]
+//NOTE: This is a quick/dirty way of explore a specific test case causing an error, as opposed to a general test case that should be a Nunit test
+//In library mode (needed for Nunit), comment out entrypoint and change project type to library in fsproj
+//In exe mode, uncomment entrypoint and change project type to exe
+//[<EntryPoint>]
 let main _ = 
     let code =
         StringBuilder()

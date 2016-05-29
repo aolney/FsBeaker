@@ -158,6 +158,7 @@ type ConsoleKernel() =
     
     /// Gets the header code to prepend to all items
     let headerCode = 
+        //surprised this works -- better to use AppDomain.CurrentDomain.BaseDirectory?
         let file = FileInfo(Assembly.GetEntryAssembly().Location)
         let dir = file.Directory.FullName
         let includeFile = Path.Combine(dir, "Include.fsx")
@@ -243,7 +244,9 @@ type ConsoleKernel() =
         let shellRequest = JsonConvert.DeserializeObject<ShellRequest>(block)
         match executionThread.State,shellRequest with
         | Idle, Intellisense(x) -> processIntellisense(x)
-        | Idle, Execute(x) -> executionThread.Execute(fun () -> processExecute(x)) |> ignore
+        //This fails on some test cases for unknown reasons; removing thread from execute
+        //| Idle, Execute(x) -> executionThread.Execute(fun () -> processExecute(x)) |> ignore
+        | Idle, Execute(x) ->  processExecute(x) |> ignore
         | Executing, Interrupt -> executionThread.Interrupt()
         | _ -> () //Ignore all other cases. Do not want any output here else we might disturb a client waiting for exec results.
 
