@@ -1,12 +1,12 @@
-#What?
+# What?
 This is a fork of the [excellent F# plugin for Beaker Notebook](https://github.com/BayardRock/FsBeaker).
 
 This fork focusses on functionality from Linux and the Docker container.
 
-#I'm impatient
+# I'm impatient
 No problem, go ahead and [pull a Docker image with Beaker and the FSharp plugin installed](https://hub.docker.com/r/aolney/beaker/).
 
-#Building and Installation
+# Building and Installation
 To build and install:
 - Clone this repo
 - Run build.sh
@@ -26,7 +26,7 @@ To build and install:
 - If everything worked, tag this container, e.g. `docker commit XXXXXX beakernotebook/beaker:fsharp`
 - In the future, run this tagged image, e.g. `docker run -v /z/aolney:/z/aolney -p 8800:8800 -t beakernotebook/beaker:fsharp`
 
-#Notes
+# Notes
 
 Some features of the original plugin are currently disabled because of cross platform issues:
 - Type providers
@@ -48,6 +48,6 @@ Retrieve the value of x assigned in another language:
 
 `beaker?x`
 
-#Learn more about Beaker Notebooks
+# Learn more about Beaker Notebooks
 - [Wiki](https://github.com/twosigma/beaker-notebook/wiki)
 - [Examples](https://pub.beakernotebook.com/#/publications/featured)
